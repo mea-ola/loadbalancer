@@ -1,0 +1,12 @@
+[Unit]
+Description=Load Balancer Proxy
+Requires=docker.service
+After=docker.service
+
+[Service]
+ExecStart=/usr/bin/docker run -t --name lb_proxy -v /var/www/consul:/var/www/consul:ro --net=host 7imbrook/mynginx
+ExecStop=/usr/bin/docker kill lb_proxy
+ExecStop=/usr/bin/docker rm lb_proxy
+
+[Install]
+WantedBy=multi-user.target

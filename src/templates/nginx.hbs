@@ -1,0 +1,83 @@
+worker_processes 4;
+daemon off;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  access_log /dev/tty;
+  error_log /dev/tty debug;
+
+  server {
+    listen         80;
+    server_name    *.timbrook.im;
+    return         301 https://$server_name$request_uri;
+  }
+
+  server {
+    server_name consul.dc.*;
+    listen 443;
+    ssl on;
+    ssl_certificate /etc/ssl/ssl.crt;
+    ssl_certificate_key /etc/ssl/ssl.key;
+
+    location / {
+      auth_basic "consul";
+      auth_basic_user_file /var/www/consul/.htpasswd;
+      proxy_pass http://127.0.0.1:8500/;
+    }
+  }
+
+  server {
+    server_name mesos.dc.*;
+    listen 443;
+    ssl on;
+    ssl_certificate /etc/ssl/ssl.crt;
+    ssl_certificate_key /etc/ssl/ssl.key;
+
+    location / {
+      auth_basic "consul";
+      auth_basic_user_file /var/www/consul/.htpasswd;
+      proxy_pass http://10.134.51.26:5050;
+    }
+  }
+
+  server {
+    server_name marathon.dc.*;
+    listen 443;
+    ssl on;
+    ssl_certificate /etc/ssl/ssl.crt;
+    ssl_certificate_key /etc/ssl/ssl.key;
+
+    location / {
+      auth_basic "consul";
+      auth_basic_user_file /var/www/consul/.htpasswd;
+      proxy_pass http://10.134.51.26:8080;
+    }
+  }
+
+  ###
+  # Auto generated from marathon
+  ###
+{{#each apps}}
+  upstream {{id}} {
+    {{#each tasks}}
+      # {{id}}
+      server {{host}}:{{ports}};
+    {{/each}}
+  }
+
+  server {
+    server_name {{labels.domain}};
+    listen 443;
+    ssl on;
+    ssl_certificate /etc/ssl/ssl.crt;
+    ssl_certificate_key /etc/ssl/ssl.key;
+
+    location / {
+      proxy_pass http://{{id}};
+    }
+  }
+{{/each}}
+}
